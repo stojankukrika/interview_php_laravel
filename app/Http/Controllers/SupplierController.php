@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreateSupplierRequest;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 
@@ -35,8 +36,10 @@ class SupplierController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(CreateSupplierRequest $request)
     {
+        Supplier::create($request->validated());
+        return response()->json(['success' => 'success'], 204);
     }
 
     /**

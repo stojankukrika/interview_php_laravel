@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Supplier;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Storage;
@@ -20,11 +21,41 @@ class SupplierTest extends TestCase
     public function testCalculateAmountOfHoursDuringTheWeekSuppliersAreWorking()
     {
         $response = $this->get('/api/suppliers');
-        $hours = NAN;
+
+        $hours = $this->calculateWorkingHours($response['data']['suppliers']);
 
         $response->assertStatus(200);
         $this->assertEquals(136, $hours,
             "Our suppliers are working X hours per week in total. Please, find out how much they work..");
+    }
+
+    private function calculateWorkingHours($suppliers): int
+    {
+        $hours = 0;
+        foreach ($suppliers as $supplier){
+            $hours += $this->parseHours($supplier['mon']);
+            $hours += $this->parseHours($supplier['tue']);
+            $hours += $this->parseHours($supplier['wed']);
+            $hours += $this->parseHours($supplier['thu']);
+            $hours += $this->parseHours($supplier['fri']);
+            $hours += $this->parseHours($supplier['sat']);
+            $hours += $this->parseHours($supplier['sun']);
+        }
+        return $hours;
+    }
+
+    private function parseHours($working_hours): int
+    {
+        $hours = 0;
+        //Пн: 12:00-15:00,19:00-21:00
+        //Пн: 08:00-23:00
+        $working_hour_list = explode(',',substr($working_hours, strpos($working_hours, ':') + 2));
+        //19:00-21:00
+        foreach ($working_hour_list as $work_hour){
+            $start_end_hours = explode('-',$work_hour);
+            $hours += Carbon::createFromFormat('H:i', $start_end_hours[1])->floatDiffInHours(Carbon::createFromFormat('H:i', $start_end_hours[0]));
+        }
+        return $hours;
     }
 
     /**
@@ -51,8 +82,8 @@ class SupplierTest extends TestCase
         $this->assertNotNull($dbSupplier->name);
         $this->assertNotNull($dbSupplier->district);
 
-
         $response = $this->post('/api/suppliers', $supplier);
+
         $response->assertStatus(422);
     }
 }
